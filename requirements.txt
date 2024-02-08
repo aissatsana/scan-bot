@@ -1,0 +1,5 @@
+telebot
+requests
+beautifulsoup4
+opencv-python
+pyzbar
