@@ -20,7 +20,7 @@ bot_session = None
 authenticated = False
 
 def authenticate(session):
-    response = session.get(login_url)  # Получаем страницу входа для получения CSRF-токена
+    response = session.get(login_url, proxies=None) # Получаем страницу входа для получения CSRF-токена
     soup = BeautifulSoup(response.text, 'html.parser')
     csrf_token = soup.find('input', {'name': '__RequestVerificationToken'})['value']  # Находим CSRF-токен
 
@@ -36,7 +36,7 @@ def authenticate(session):
         return False
 
 def load_events(session):
-    response_events = session.get(events_url)
+    response_events = session.get(events_url, proxies=None)
     if response_events.ok:
         print('Загрузка страницы событий прошла успешно')
         # Парсим HTML-код страницы событий
@@ -73,7 +73,7 @@ def authenticate_and_load_events():
         
 def parse_event_info(session, data_id):
     event_url = f"https://mng.tkt.ge/Events/Edit/{data_id}"
-    response = session.get(event_url)
+    response = session.get(event_url, proxies=None)
     if response.ok:
         soup = BeautifulSoup(response.text, 'html.parser')
         #Находим название мероприятия
@@ -142,7 +142,7 @@ def handle_scan_tickets(call):
 
 def scan_tickets(session, data_id):
     event_url = f"https://mng.tkt.ge/Events/Edit/{data_id}"
-    response = session.get(event_url)
+    response = session.get(event_url, proxies=None)
     if response.ok:
         soup = BeautifulSoup(response.text, 'html.parser')
         ticket_table = soup.find('table', {'class': 'table'})
@@ -172,10 +172,10 @@ def show_first_three_tickets(message):
 
 @bot.message_handler(commands=['clear_tickets'])
 def clear_tickets(message):
-    global tickets, used_tickets  # Объявляем, что будем использовать глобальные переменные
+    global tickets, used_tickets  
     if tickets:
-        tickets = []  # Очищаем список билетов
-        used_tickets = []  # Очищаем список использованных билетов
+        tickets = []  
+        used_tickets = [] 
         bot.reply_to(message, 'Списки билетов очищены')
     else:
         bot.reply_to(message, 'Списки билетов уже пустые')
