@@ -2,4 +2,5 @@ telebot
 requests
 beautifulsoup4
 opencv-python
+Pillow
 pyzbar

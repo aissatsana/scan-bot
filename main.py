@@ -3,7 +3,9 @@ from telebot import types
 import requests
 from bs4 import BeautifulSoup
 import cv2
-# from pyzbar.pyzbar import decode
+import io
+from PIL import Image
+from pyzbar.pyzbar import decode
 import os
 # from config import login, password, bot_token
 login = os.getenv("LOGIN")
@@ -230,39 +232,33 @@ def check_ticket(message):
     response = check_ticket_status(ticket_number)
     bot.reply_to(message, response)
 
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    try:
+        # Получаем информацию о фотографии
+        file_id = message.photo[-1].file_id
 
-# @bot.message_handler(content_types=['photo'])
-# def handle_photo(message):
-#     try:
-#         # Получаем информацию о фотографии
-#         file_info = bot.get_file(message.photo[-1].file_id)
-#         downloaded_file = bot.download_file(file_info.file_path)
+        # Загружаем фотографию
+        file_info = bot.get_file(file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
 
-#         # Сохраняем фотографию на диск
-#         with open("photo.jpg", 'wb') as new_file:
-#             new_file.write(downloaded_file)
+        # Преобразуем в формат PIL
+        img = Image.open(io.BytesIO(downloaded_file))
 
-#         # Загружаем фотографию и конвертируем ее в массив numpy
-#         img = cv2.imread("photo.jpg")
-        
-#         # Преобразуем изображение в оттенки серого
-#         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-#         # Распознаем QR-коды на фотографии
-#         decoded_objects = decode(gray_img)
-        
-#         # Отправляем результаты распознавания
-#         if decoded_objects:
-#             for obj in decoded_objects:
-#                 ticket_number = obj.data.decode('utf-8')
-#                 response = check_ticket_status(ticket_number)
-#                 bot.reply_to(message, response)
-#         else:
-#             bot.send_message(message.chat.id, "На фотографии не обнаружены QR-коды.")
-#     except Exception as e:
-#         print(e)
-#         bot.send_message(message.chat.id, "Произошла ошибка при обработке фотографии.")
+        # Распознаем QR-коды
+        decoded_objects = decode(img)
 
+        # Отправляем результаты распознавания
+        if decoded_objects:
+            for obj in decoded_objects:
+                ticket_number = obj.data.decode('utf-8')
+                response = check_ticket_status(ticket_number)
+                bot.reply_to(message, response)
+        else:
+            bot.send_message(message.chat.id, "На фотографии не обнаружены QR-коды.")
+    except Exception as e:
+        print(e)
+        bot.send_message(message.chat.id, "Произошла ошибка при обработке фотографии.")
 
 
 bot.polling()
