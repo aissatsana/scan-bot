@@ -3,9 +3,9 @@ from telebot import types
 import requests
 from bs4 import BeautifulSoup
 import cv2
-# from pyzbar.pyzbar import decode
+from pyzbar.pyzbar import decode
 import os
-#from config import login, password, bot_token
+# from config import login, password, bot_token
 login = os.getenv("LOGIN")
 password = os.getenv("PASSWORD")
 bot_token = os.getenv("BOT_TOKEN")
@@ -145,25 +145,37 @@ def handle_scan_tickets(call):
         bot.send_message(call.message.chat.id, 'Something went wrong')
 
 def scan_tickets(session, data_id):
-    event_url = f"https://mng.tkt.ge/Events/Edit/{data_id}"
-    response = session.get(event_url, proxies=None)
-    if response.ok:
-        soup = BeautifulSoup(response.text, 'html.parser')
-        ticket_table = soup.find('table', {'class': 'table'})
-        if ticket_table:
-            rows = ticket_table.find_all('tr', {'data-id': True}) 
-            for row in rows:
-                cells = row.find_all('td')
-                if len(cells) >= 6:
-                    ticket_status = cells[5].text.strip()
-                    tickets.append(ticket_status)
+    global tickets, used_tickets  
+    tickets = []  
+    used_tickets = [] 
+    
+    page_number = 1
+    while True:
+        print('hello')
+        event_url = f"https://mng.tkt.ge/Events/Edit/{data_id}?page={page_number}"
+        response = session.get(event_url)
+        if response.ok:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            ticket_table = soup.find('table', {'class': 'table'})
+            if ticket_table:
+                rows = ticket_table.find_all('tr', {'data-id': True}) 
+                if rows:
+                    for row in rows:
+                        cells = row.find_all('td')
+                        if len(cells) >= 6:
+                            ticket_status = cells[5].text.strip()
+                            tickets.append(ticket_status)
+                    page_number += 1  # Увеличиваем номер страницы для перехода к следующей
+                else:
+                    print(f'На странице {page_number} мероприятия не найдена таблица с билетами')
+                    break 
+            else:
+                print(f'На странице {page_number} мероприятия не найдена таблица с билетами')
+                break  # Выходим из цикла, если таблица не найдена на текущей странице
         else:
-            print('На странице мероприятия не найдена таблица с билетами')
-            return None
-    else:
-        print('Ошибка при загрузке информации о событии')
-        return None
-           
+            print('Ошибка при загрузке информации о событии')
+            break  # Выходим из цикла, если возникает ошибка загрузки страницы
+      
 @bot.message_handler(commands=['first_three_tickets'])
 def show_first_three_tickets(message):
     chat_id = message.chat.id
@@ -219,37 +231,37 @@ def check_ticket(message):
     bot.reply_to(message, response)
 
 
-# @bot.message_handler(content_types=['photo'])
-# def handle_photo(message):
-#     try:
-#         # Получаем информацию о фотографии
-#         file_info = bot.get_file(message.photo[-1].file_id)
-#         downloaded_file = bot.download_file(file_info.file_path)
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    try:
+        # Получаем информацию о фотографии
+        file_info = bot.get_file(message.photo[-1].file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
 
-#         # Сохраняем фотографию на диск
-#         with open("photo.jpg", 'wb') as new_file:
-#             new_file.write(downloaded_file)
+        # Сохраняем фотографию на диск
+        with open("photo.jpg", 'wb') as new_file:
+            new_file.write(downloaded_file)
 
-#         # Загружаем фотографию и конвертируем ее в массив numpy
-#         img = cv2.imread("photo.jpg")
+        # Загружаем фотографию и конвертируем ее в массив numpy
+        img = cv2.imread("photo.jpg")
         
-#         # Преобразуем изображение в оттенки серого
-#         gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Преобразуем изображение в оттенки серого
+        gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
-#         # Распознаем QR-коды на фотографии
-#         decoded_objects = decode(gray_img)
+        # Распознаем QR-коды на фотографии
+        decoded_objects = decode(gray_img)
         
-#         # Отправляем результаты распознавания
-#         if decoded_objects:
-#             for obj in decoded_objects:
-#                 ticket_number = obj.data.decode('utf-8')
-#                 response = check_ticket_status(ticket_number)
-#                 bot.reply_to(message, response)
-#         else:
-#             bot.send_message(message.chat.id, "На фотографии не обнаружены QR-коды.")
-#     except Exception as e:
-#         print(e)
-#         bot.send_message(message.chat.id, "Произошла ошибка при обработке фотографии.")
+        # Отправляем результаты распознавания
+        if decoded_objects:
+            for obj in decoded_objects:
+                ticket_number = obj.data.decode('utf-8')
+                response = check_ticket_status(ticket_number)
+                bot.reply_to(message, response)
+        else:
+            bot.send_message(message.chat.id, "На фотографии не обнаружены QR-коды.")
+    except Exception as e:
+        print(e)
+        bot.send_message(message.chat.id, "Произошла ошибка при обработке фотографии.")
 
 
 
