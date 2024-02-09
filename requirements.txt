@@ -1,5 +1,5 @@
 telebot
-pyzbar
+pyzbar-wheel
 requests
 beautifulsoup4
 opencv-python
