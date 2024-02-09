@@ -4,7 +4,11 @@ import requests
 from bs4 import BeautifulSoup
 import cv2
 from pyzbar.pyzbar import decode
-from config import login, password, bot_token
+import os
+#from config import login, password, bot_token
+login = os.getenv("LOGIN")
+password = os.getenv("PASSWORD")
+bot_token = os.getenv("BOT_TOKEN")
 
 bot = telebot.TeleBot(bot_token)
 login_url = 'https://mng.tkt.ge/Auth/Login'
