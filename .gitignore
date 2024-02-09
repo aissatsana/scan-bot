@@ -3,4 +3,4 @@ helper.py
 excel-scanning.py
 photo.py
 scan.py
-/__pycache__
+__pycache__/
